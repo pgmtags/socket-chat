@@ -1,6 +1,0 @@
-*.out
-*.o
-*.gch
-/server
-/client
-.DS_Store

@@ -14,6 +14,9 @@ Python socket based CLI multi-client chat (client)
 """
 
 # TODO: add the ability to change the lobby. Create func 'change_lobby'
+# TODO: fix queue in setup_chat_room()
+# TODO: give the ability to write emoji in the console, or make a command that will convert certain codes into emoji,
+#  the list of codes will be displayed behind the command
 # TODO: Add user login & create DB with User information(Password, user,
 #       (maybe)ID, bonusKey (If i'll add ID user to restore the "Name"))
 #       At the moment I am unable to fix one thing when trying to implement this function (
@@ -119,12 +122,16 @@ class ChatClient:
                 self.disconnect()
 
     def setup_chat_room(self):
-        data = self.s.recv(self.RECV_BUFFER).decode('utf-8')
-        self.print_list(f"{Fore.GREEN}CHAT ROOMS", data)
-        groupName = input(f"{Fore.MAGENTA}Join a Chat Room or Create New: {Fore.YELLOW}").replace(" ", "")
-        if groupName:
-            self.group = groupName
-        self.s.send(self.group.encode())
+        try:
+            data = self.s.recv(self.RECV_BUFFER).decode('utf-8')
+            self.print_list(f"{Fore.GREEN}CHAT ROOMS", data)
+            groupName = input(f"{Fore.MAGENTA}Join a Chat Room or Create New: {Fore.YELLOW}").replace(" ", "")
+            if groupName:
+                self.group = groupName
+            self.s.send(self.group.encode())
+        except TimeoutError:
+            print("Please, Wait for the other person to validate")  # Need fix queue
+            sys.exit(0)
 
     def get_username(self):
         while not self.username:

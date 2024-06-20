@@ -1,6 +1,5 @@
 """
-By Sudhanshu Vishnoi
-Update by AndrijZyn
+By Sudhanshu Vishnoi, Update by AndrijZyn
 Python socket based CLI multi-client chat (server)
     makes use of SELECT multiplexing to multiplex multiple clients
 - Proper error handling and messages
@@ -11,7 +10,9 @@ Python socket based CLI multi-client chat (server)
 
 import socket
 import select
-import sys
+from colorama import init, Fore, Style
+
+init(autoreset=True)  # Initialize colorama
 
 
 class ChatServer:
@@ -38,7 +39,7 @@ class ChatServer:
             self.network["default"]["connections"].append(self.server_socket)
             self.network["default"]["names"].append("<server>")
 
-            print(f"Running chat server at {self.HOST}:{self.PORT}")
+            print(f"{Fore.LIGHTYELLOW_EX}Server has been starter in {self.HOST}:{self.PORT}{Style.RESET_ALL}")
 
             while True:
                 all_connections = []
@@ -59,8 +60,8 @@ class ChatServer:
             if sock in self.network[group]["connections"]:
                 i = self.network[group]["connections"].index(sock)
                 client_name = self.network[group]["names"][i]
-                msg_notification = (f"{client_name} from [{group}] <{sock.getpeername()[0]}:{sock.getpeername()[1]}> "
-                                    f"went offline.")
+                msg_notification = (f"{Fore.LIGHTRED_EX}{client_name} from [{group}] "
+                                    f"<{sock.getpeername()[0]}:{sock.getpeername()[1]}> went offline.{Style.RESET_ALL}")
                 print(msg_notification)
                 self.broadcast(group, sock, msg_notification, is_info=True)
                 del self.network[group]["connections"][i]
@@ -108,10 +109,11 @@ class ChatServer:
         addr = sockfd.getpeername()
         self.network[group]["names"].append(client_name)
         self.network[group]["connections"].append(sockfd)
-        msg_notification = f"{client_name} joined [{group}] from <{addr[0]}:{addr[1]}>"
+        msg_notification = (f"{Fore.LIGHTRED_EX}{client_name} was connected to "
+                            f"[{group}] from <{addr[0]}:{addr[1]}>{Style.RESET_ALL}")
         print(msg_notification)
         self.broadcast(group, sockfd, msg_notification, is_info=True)
-        sockfd.send(f"SERVER_INFO{self.separator}Welcome.".encode())
+        sockfd.send(f"SERVER_INFO{self.separator}Welcome.".encode())  # Need fix that
 
     def handle_client_message(self, sock):
         try:
@@ -149,12 +151,12 @@ class ChatServer:
             self.network[group]["connections"].index(sender)]
         message = f"{sender_name}{self.separator}{message}".encode()
 
-        for socket_ in self.network[group]["connections"]:
-            if socket_ != self.server_socket and socket_ != sender:
+        for server_socket in self.network[group]["connections"]:
+            if server_socket != self.server_socket and server_socket != sender:
                 try:
-                    socket_.sendall(message)
+                    server_socket.sendall(message)
                 except BrokenPipeError:
-                    self.remove_client(socket_)
+                    self.remove_client(server_socket)
 
 
 if __name__ == '__main__':

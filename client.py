@@ -1,5 +1,5 @@
 import sys
-import select
+from select import select
 import socket
 from colorama import init, Fore, Style
 from os import system
@@ -29,9 +29,9 @@ Python socket based CLI multi-client chat (client)
 init(autoreset=True)  # Initialize colorama
 
 # Emoji's
-problem = "\N{anger symbol} "
-angry = " \N{angry face}"
-hand = "\U0001F44B"
+PROBLEM_EMOJI = "\N{anger symbol} "
+ANGRY_EMOJI = " \N{angry face}"
+EMOJI_HAND = "\U0001F44B"
 
 
 class ChatClient:
@@ -63,17 +63,21 @@ class ChatClient:
             print(f"{Fore.GREEN}{Style.BRIGHT}You have been connected to the server Home, "
                   f"{Fore.BLUE}select{Fore.GREEN}, or create a new room")
         except socket.timeout:
-            print(problem + "IDK where to dock" + angry)
+            print(PROBLEM_EMOJI + "IDK where to dock" + ANGRY_EMOJI)
             sys.exit(0)
         except socket.error as e:
-            print(problem + f"Connection error: {e}")
+            print(PROBLEM_EMOJI + f"Connection error: {e}")
             sys.exit(1)
 
     def disconnect(self, status):
         if status == "cork":
             print("Please, Wait for the other person to validate")  # Need fix queue
+            sys.exit(0)
+        if status == "name":
+            print(f"{Fore.RED}{Style.BRIGHT}ERROR> Can't have same names{Fore.RESET}")
+            sys.exit(0)
         system('clear')
-        print(f"Disconnecting... {hand}")
+        print(f"Disconnected {EMOJI_HAND}")
         if self.s:
             self.s.close()
         sys.exit(0)
@@ -94,7 +98,6 @@ class ChatClient:
                 dt = data.split(self.separator, 1)
                 if len(dt) < 2:
                     print(f"Malformed message: {data}")
-                    return
                 name, msg = dt
 
                 if name == "SERVER_INFO":
@@ -105,11 +108,10 @@ class ChatClient:
                 else:
                     sys.stdout.write(Fore.CYAN + Style.BRIGHT)
                     sys.stdout.write(f"{name}> ")
-
                 sys.stdout.write(Fore.RESET)
                 sys.stdout.write(f"{msg}\n")
             except Exception as e:
-                print(problem + f"Error processing message: {e}")
+                print(PROBLEM_EMOJI + f"Error processing message: {e}")
 
     def handle_user_input(self, msg):
         if msg == "CLEAR":
@@ -122,7 +124,7 @@ class ChatClient:
             try:
                 self.s.send((self.group + self.separator + msg).encode())
             except socket.error as e:
-                print(problem + f"Send error: {e}")
+                print(PROBLEM_EMOJI + f"Send error: {e}")
                 self.disconnect("main")
 
     def setup_chat_room(self):
@@ -146,9 +148,11 @@ class ChatClient:
 
     def handle_first_connection(self):
         firstConnResponse = self.s.recv(self.RECV_BUFFER).decode()
-        if f"SERVER_FAIL{self.separator}" in firstConnResponse:
-            print(f"{Fore.RED}{Style.BRIGHT}ERROR> Cannot have same names{Fore.RESET}")
+        if not firstConnResponse:
+            print(f"{Fore.RED}{Style.BRIGHT}ERROR> Connection closed by server{Fore.RESET}")
             self.disconnect("main")
+        elif f"SERVER_FAIL{self.separator}" in firstConnResponse:
+            self.disconnect("name")
         else:
             system('clear')
             print(self.helpMsg)
@@ -166,7 +170,7 @@ class ChatClient:
                 sys.stdout.write(f"{Fore.GREEN}{Style.BRIGHT}> {Fore.RESET}")
                 sys.stdout.flush()
                 socket_list = [sys.stdin, self.s]
-                read_sockets, _, _ = select.select(socket_list, [], [])
+                read_sockets, _, _ = select(socket_list, [], [])
                 for sock in read_sockets:
                     if sock == self.s:
                         try:
@@ -175,7 +179,7 @@ class ChatClient:
                                 self.disconnect("main")
                             self.handle_incoming_message(data)
                         except socket.error as e:
-                            print(problem + f"Receive error: {e}")
+                            print(PROBLEM_EMOJI + f"Receive error: {e}")
                             self.disconnect("main")
                     else:
                         msg = sys.stdin.readline().strip()
